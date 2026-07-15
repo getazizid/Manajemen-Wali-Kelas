@@ -3,10 +3,10 @@ import { db, handleFirestoreError, OperationType } from '../firebase';
 import { UserRole, StudentGender, InventoryCondition, AchievementCategory, AchievementLevel, ViolationCategory } from '../types';
 
 export async function seedDatabaseIfEmpty() {
-  const usersPath = 'users';
+  const classesPath = 'classes';
   try {
-    const usersSnap = await getDocs(collection(db, usersPath));
-    if (usersSnap.size > 0) {
+    const classesSnap = await getDocs(collection(db, classesPath));
+    if (classesSnap.size > 0) {
       console.log('Database already seeded or has data.');
       return;
     }
