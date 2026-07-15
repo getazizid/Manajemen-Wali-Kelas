@@ -43,6 +43,7 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+console.log('Firebase Initialized with Project ID:', firebaseConfig.projectId);
 
 // Clean up database ID if it is the default one or is an instruction placeholder
 const isValidDatabaseId = (id: string) => {
