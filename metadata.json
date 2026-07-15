@@ -1,0 +1,6 @@
+{
+  "name": "Manajemen Wali Kelas SMA/SMK",
+  "description": "Aplikasi manajemen wali kelas SMA/SMK dengan fitur data siswa, pengurus kelas, denah tempat duduk, inventaris kelas, prestasi murid, pelanggaran murid, log home visit, dan dashboard statistik.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

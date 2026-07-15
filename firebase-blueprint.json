@@ -1,0 +1,193 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with roles and class assignments",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["admin", "kepala_sekolah", "wali_kelas"], "maxLength": 20 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Class": {
+      "title": "Class",
+      "description": "School classes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 50 },
+        "homeroomTeacherId": { "type": "string", "maxLength": 100 },
+        "homeroomTeacherName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "nisn": { "type": "string", "maxLength": 20 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "gender": { "type": "string", "enum": ["Laki-laki", "Perempuan"], "maxLength": 20 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "email": { "type": "string", "maxLength": 100 },
+        "parentName": { "type": "string", "maxLength": 100 },
+        "parentPhone": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "nisn", "classId", "gender"]
+    },
+    "ClassOfficer": {
+      "title": "ClassOfficer",
+      "description": "Class management officers",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string", "maxLength": 50 },
+        "ketua": { "type": "string", "maxLength": 100 },
+        "wakil": { "type": "string", "maxLength": 100 },
+        "sekretaris": { "type": "string", "maxLength": 100 },
+        "bendahara": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["classId"]
+    },
+    "SeatingArrangement": {
+      "title": "SeatingArrangement",
+      "description": "Class seating arrangement layout",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string", "maxLength": 50 },
+        "rows": { "type": "integer" },
+        "cols": { "type": "integer" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["classId", "rows", "cols"]
+    },
+    "Inventory": {
+      "title": "Inventory",
+      "description": "Class inventory items",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string", "maxLength": 50 },
+        "itemName": { "type": "string", "maxLength": 100 },
+        "quantity": { "type": "integer" },
+        "condition": { "type": "string", "enum": ["Baik", "Rusak Ringan", "Rusak Berat"], "maxLength": 20 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["classId", "itemName", "quantity", "condition"]
+    },
+    "Achievement": {
+      "title": "Achievement",
+      "description": "Student achievements",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "maxLength": 50 },
+        "studentName": { "type": "string", "maxLength": 100 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "achievementName": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "enum": ["Akademik", "Non-Akademik"], "maxLength": 30 },
+        "level": { "type": "string", "enum": ["Sekolah", "Kecamatan", "Kabupaten", "Provinsi", "Nasional", "Internasional"], "maxLength": 30 },
+        "date": { "type": "string" },
+        "description": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["studentId", "studentName", "classId", "achievementName", "category", "level", "date"]
+    },
+    "Violation": {
+      "title": "Violation",
+      "description": "Student behavior infractions",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "maxLength": 50 },
+        "studentName": { "type": "string", "maxLength": 100 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "violationName": { "type": "string", "maxLength": 150 },
+        "points": { "type": "integer" },
+        "category": { "type": "string", "enum": ["Ringan", "Sedang", "Berat"], "maxLength": 20 },
+        "date": { "type": "string" },
+        "actionTaken": { "type": "string", "maxLength": 250 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["studentId", "studentName", "classId", "violationName", "points", "category", "date"]
+    },
+    "HomeVisit": {
+      "title": "HomeVisit",
+      "description": "Home visit documentation logs",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "maxLength": 50 },
+        "studentName": { "type": "string", "maxLength": 100 },
+        "classId": { "type": "string", "maxLength": 50 },
+        "date": { "type": "string" },
+        "purpose": { "type": "string", "maxLength": 250 },
+        "result": { "type": "string", "maxLength": 1000 },
+        "documentationUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["studentId", "studentName", "classId", "date", "purpose", "result"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System-wide or class-specific real-time notifications",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string", "maxLength": 50 },
+        "title": { "type": "string", "maxLength": 100 },
+        "message": { "type": "string", "maxLength": 250 },
+        "type": { "type": "string", "enum": ["siswa", "prestasi", "pelanggaran", "inventaris", "visit"], "maxLength": 20 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "message", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "User",
+      "description": "User records containing authentication details, roles, and assigned class IDs."
+    },
+    "classes": {
+      "schema": "Class",
+      "description": "Active classes available in the school."
+    },
+    "students": {
+      "schema": "Student",
+      "description": "All student files categorized by school classes."
+    },
+    "class_officers": {
+      "schema": "ClassOfficer",
+      "description": "Class officer structures mapped by class identifier."
+    },
+    "seating_arrangements": {
+      "schema": "SeatingArrangement",
+      "description": "Grids and desk layouts representing room physical layouts."
+    },
+    "inventories": {
+      "schema": "Inventory",
+      "description": "Active physical items, electronics, books, and resources logged inside classrooms."
+    },
+    "achievements": {
+      "schema": "Achievement",
+      "description": "Student honors, contest successes, and other achievements."
+    },
+    "violations": {
+      "schema": "Violation",
+      "description": "Conduct issues, lateness logs, or rule infractions with cumulative point tallies."
+    },
+    "home_visits": {
+      "schema": "HomeVisit",
+      "description": "Homeroom teacher physical visits to student residences, complete with logged responses and summaries."
+    },
+    "notifications": {
+      "schema": "Notification",
+      "description": "Real-time updates broadcast to dashboard elements."
+    }
+  }
+}

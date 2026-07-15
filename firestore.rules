@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function getUserClassId() {
+      return getUserData().classId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (getUserRole() == 'admin' || request.auth.token.email == 'abdulazizitn@gmail.com');
+    }
+
+    function isKepalaSekolah() {
+      return isSignedIn() && getUserRole() == 'kepala_sekolah';
+    }
+
+    function isWaliKelas() {
+      return isSignedIn() && getUserRole() == 'wali_kelas';
+    }
+
+    function isWaliKelasOfClass(classId) {
+      return isWaliKelas() && getUserClassId() == classId;
+    }
+
+    function canReadClassData(classId) {
+      return isAdmin() || isKepalaSekolah() || isWaliKelasOfClass(classId);
+    }
+
+    function canWriteClassData(classId) {
+      return isAdmin() || isWaliKelasOfClass(classId);
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (isAdmin() || isKepalaSekolah() || request.auth.uid == userId);
+      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        (request.auth.uid == userId && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'classId', 'createdAt'])
+        )
+      );
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // Classes Collection
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    // Students Collection
+    match /students/{studentId} {
+      allow read: if isSignedIn() && canReadClassData(resource.data.classId);
+      allow create: if isSignedIn() && canWriteClassData(request.resource.data.classId);
+      allow update: if isSignedIn() && (
+        canWriteClassData(resource.data.classId) && 
+        canWriteClassData(request.resource.data.classId) &&
+        request.resource.data.createdAt == resource.data.createdAt
+      );
+      allow delete: if isSignedIn() && canWriteClassData(resource.data.classId);
+    }
+
+    // Class Officers
+    match /class_officers/{classId} {
+      allow read: if isSignedIn() && canReadClassData(classId);
+      allow write: if isSignedIn() && canWriteClassData(classId);
+    }
+
+    // Seating Arrangements
+    match /seating_arrangements/{classId} {
+      allow read: if isSignedIn() && canReadClassData(classId);
+      allow write: if isSignedIn() && canWriteClassData(classId);
+    }
+
+    // Inventories
+    match /inventories/{inventoryId} {
+      allow read: if isSignedIn() && canReadClassData(resource.data.classId);
+      allow create: if isSignedIn() && canWriteClassData(request.resource.data.classId);
+      allow update: if isSignedIn() && (
+        canWriteClassData(resource.data.classId) && 
+        canWriteClassData(request.resource.data.classId) &&
+        request.resource.data.createdAt == resource.data.createdAt
+      );
+      allow delete: if isSignedIn() && canWriteClassData(resource.data.classId);
+    }
+
+    // Achievements
+    match /achievements/{achievementId} {
+      allow read: if isSignedIn() && canReadClassData(resource.data.classId);
+      allow create: if isSignedIn() && canWriteClassData(request.resource.data.classId);
+      allow update: if isSignedIn() && (
+        canWriteClassData(resource.data.classId) && 
+        canWriteClassData(request.resource.data.classId) &&
+        request.resource.data.createdAt == resource.data.createdAt
+      );
+      allow delete: if isSignedIn() && canWriteClassData(resource.data.classId);
+    }
+
+    // Violations
+    match /violations/{violationId} {
+      allow read: if isSignedIn() && canReadClassData(resource.data.classId);
+      allow create: if isSignedIn() && canWriteClassData(request.resource.data.classId);
+      allow update: if isSignedIn() && (
+        canWriteClassData(resource.data.classId) && 
+        canWriteClassData(request.resource.data.classId) &&
+        request.resource.data.createdAt == resource.data.createdAt
+      );
+      allow delete: if isSignedIn() && canWriteClassData(resource.data.classId);
+    }
+
+    // Home Visits
+    match /home_visits/{visitId} {
+      allow read: if isSignedIn() && canReadClassData(resource.data.classId);
+      allow create: if isSignedIn() && canWriteClassData(request.resource.data.classId);
+      allow update: if isSignedIn() && (
+        canWriteClassData(resource.data.classId) && 
+        canWriteClassData(request.resource.data.classId) &&
+        request.resource.data.createdAt == resource.data.createdAt
+      );
+      allow delete: if isSignedIn() && canWriteClassData(resource.data.classId);
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (
+        resource.data.classId == null || 
+        canReadClassData(resource.data.classId)
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.classId == null || 
+        canWriteClassData(request.resource.data.classId)
+      );
+      allow update: if isSignedIn() && (
+        (resource.data.classId == null || canWriteClassData(resource.data.classId)) &&
+        (request.resource.data.classId == null || request.resource.data.classId == resource.data.classId)
+      );
+      allow delete: if isSignedIn() && (
+        resource.data.classId == null ? isAdmin() : canWriteClassData(resource.data.classId)
+      );
+    }
+
+  }
+}
