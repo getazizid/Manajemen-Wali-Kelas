@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../firebase';
 import { User, UserRole } from '../types';
@@ -81,9 +81,21 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setLoading(true);
     setError(null);
     try {
-      // Simulate login by setting user info directly
+      let firebaseUid = id;
+      let anonymousAuthSuccess = false;
+
+      // 1. Try to sign in anonymously to obtain a secure Firebase Auth context
+      try {
+        const userCredential = await signInAnonymously(auth);
+        firebaseUid = userCredential.user.uid;
+        anonymousAuthSuccess = true;
+      } catch (authErr: any) {
+        console.warn('Anonymous Auth is not enabled in Firebase Console. Falling back to local state-only session.', authErr);
+      }
+
+      // 2. Prepare the demo user profile
       const demoUser: User = {
-        id,
+        id: firebaseUid,
         name,
         email,
         role,
@@ -91,20 +103,25 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         createdAt: new Date().toISOString(),
       };
       
-      // Ensure the demo user profile document exists in firestore
-      const userDocRef = doc(db, 'users', id);
-      await setDoc(userDocRef, {
-        name,
-        email,
-        role,
-        classId,
-        createdAt: new Date().toISOString(),
-      }, { merge: true });
+      // 3. Attempt to save the user profile document in Firestore
+      try {
+        const userDocRef = doc(db, 'users', firebaseUid);
+        await setDoc(userDocRef, {
+          name,
+          email,
+          role,
+          classId,
+          createdAt: new Date().toISOString(),
+        }, { merge: true });
+      } catch (dbErr: any) {
+        console.warn('Could not write profile to Firestore (likely because rules block it or unauthenticated). Proceeding with client-side session.', dbErr);
+        // Do not block login even if the database write fails - let them use the app
+      }
 
       onLoginSuccess(demoUser);
     } catch (err: any) {
       console.error(err);
-      setError('Gagal masuk sebagai Akun Demo.');
+      setError(`Gagal masuk sebagai Akun Demo. Error: ${err?.message || String(err)}`);
     } finally {
       setLoading(false);
     }
