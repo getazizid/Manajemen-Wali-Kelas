@@ -24,14 +24,21 @@ const cleanValue = (val: any, staticVal: string): string => {
   return str;
 };
 
+const staticProjectId = firebaseConfigStatic.projectId;
+const currentProjectId = cleanValue(metaEnv.VITE_FIREBASE_PROJECT_ID || metaEnv.VITE_PROJECT_ID, staticProjectId);
+const isCustomProject = currentProjectId !== staticProjectId;
+
 const firebaseConfig = {
   apiKey: cleanValue(metaEnv.VITE_FIREBASE_API_KEY || metaEnv.VITE_API_KEY, firebaseConfigStatic.apiKey),
   authDomain: cleanValue(metaEnv.VITE_FIREBASE_AUTH_DOMAIN || metaEnv.VITE_AUTH_DOMAIN, firebaseConfigStatic.authDomain),
-  projectId: cleanValue(metaEnv.VITE_FIREBASE_PROJECT_ID || metaEnv.VITE_PROJECT_ID, firebaseConfigStatic.projectId),
+  projectId: currentProjectId,
   storageBucket: cleanValue(metaEnv.VITE_FIREBASE_STORAGE_BUCKET || metaEnv.VITE_STORAGE_BUCKET, firebaseConfigStatic.storageBucket),
   messagingSenderId: cleanValue(metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || metaEnv.VITE_MESSAGING_SENDER_ID, firebaseConfigStatic.messagingSenderId),
   appId: cleanValue(metaEnv.VITE_FIREBASE_APP_ID || metaEnv.VITE_APP_ID, firebaseConfigStatic.appId),
-  firestoreDatabaseId: cleanValue(metaEnv.VITE_FIREBASE_DATABASE_ID || metaEnv.VITE_FIREBASE_FIRESTORE_DATABASE_ID || metaEnv.VITE_FIRESTORE_DATABASE_ID, firebaseConfigStatic.firestoreDatabaseId || '(default)')
+  firestoreDatabaseId: cleanValue(
+    metaEnv.VITE_FIREBASE_DATABASE_ID || metaEnv.VITE_FIREBASE_FIRESTORE_DATABASE_ID || metaEnv.VITE_FIRESTORE_DATABASE_ID,
+    isCustomProject ? '(default)' : (firebaseConfigStatic.firestoreDatabaseId || '(default)')
+  )
 };
 
 // Initialize Firebase
