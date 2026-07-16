@@ -37,7 +37,8 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
     phone: '',
     email: '',
     parentName: '',
-    parentPhone: ''
+    parentPhone: '',
+    classId: ''
   });
 
   const isReadOnly = currentUser.role === UserRole.KEPALA_SEKOLAH;
@@ -103,7 +104,8 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
       phone: '',
       email: '',
       parentName: '',
-      parentPhone: ''
+      parentPhone: '',
+      classId: selectedClass || classesList[0] || ''
     });
     setEditingId(null);
     setShowModal(true);
@@ -118,7 +120,8 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
       phone: std.phone,
       email: std.email,
       parentName: std.parentName,
-      parentPhone: std.parentPhone
+      parentPhone: std.parentPhone,
+      classId: std.classId || selectedClass || ''
     });
     setEditingId(std.id || null);
     setShowModal(true);
@@ -126,8 +129,8 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.nisn) {
-      alert('Nama dan NISN wajib diisi.');
+    if (!formData.name || !formData.nisn || !formData.classId) {
+      alert('Nama, NISN, dan Kelas wajib diisi.');
       return;
     }
 
@@ -135,8 +138,14 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
     try {
       if (formType === 'create') {
         const payload = {
-          ...formData,
-          classId: selectedClass,
+          name: formData.name,
+          nisn: formData.nisn,
+          gender: formData.gender,
+          phone: formData.phone,
+          email: formData.email,
+          parentName: formData.parentName,
+          parentPhone: formData.parentPhone,
+          classId: formData.classId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -144,17 +153,23 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
         
         await sendRealtimeNotification(
           'Siswa Baru Ditambahkan',
-          `${formData.name} (${formData.nisn}) telah ditambahkan ke kelas ${selectedClass}`,
+          `${formData.name} (${formData.nisn}) telah ditambahkan ke kelas ${formData.classId}`,
           NotificationType.SISWA,
-          selectedClass
+          formData.classId
         );
       } else if (formType === 'update' && editingId) {
         const docRef = doc(db, path, editingId);
         const original = students.find(s => s.id === editingId);
         
         await setDoc(docRef, {
-          ...formData,
-          classId: selectedClass,
+          name: formData.name,
+          nisn: formData.nisn,
+          gender: formData.gender,
+          phone: formData.phone,
+          email: formData.email,
+          parentName: formData.parentName,
+          parentPhone: formData.parentPhone,
+          classId: formData.classId,
           createdAt: original?.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }, { merge: true });
@@ -163,7 +178,7 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
           'Data Siswa Diperbarui',
           `Informasi untuk siswa ${formData.name} telah diperbarui`,
           NotificationType.SISWA,
-          selectedClass
+          formData.classId
         );
       }
       setShowModal(false);
@@ -489,10 +504,25 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
                   <select
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value as StudentGender })}
-                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 bg-white"
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 bg-white cursor-pointer"
                   >
                     <option value={StudentGender.LAKI_LAKI}>Laki-laki</option>
                     <option value={StudentGender.PEREMPUAN}>Perempuan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Kelas *</label>
+                  <select
+                    disabled={currentUser.role === UserRole.WALI_KELAS}
+                    value={formData.classId}
+                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 bg-white disabled:bg-slate-100 disabled:text-slate-500 cursor-pointer"
+                  >
+                    <option value="">-- Pilih Kelas --</option>
+                    {classesList.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
                   </select>
                 </div>
 
