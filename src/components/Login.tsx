@@ -87,17 +87,29 @@ export default function Login({ onLoginSuccess, appName, appDesc }: LoginProps) 
       const userDocSnap = await getDoc(userDocRef);
 
       let appUser: User;
+      const isDefaultAdmin = ['abdulazizitn@gmail.com', 'rizautama84@gurusmk.belajar.id'].includes(firebaseUser.email.toLowerCase());
 
       if (userDocSnap.exists()) {
         const data = userDocSnap.data();
+        const activeRole = isDefaultAdmin ? UserRole.ADMIN : (data.role as UserRole);
+        const activeClassId = isDefaultAdmin ? '' : (data.classId || '');
+
         appUser = {
           id: firebaseUser.uid,
           name: data.name || firebaseUser.displayName || 'User',
           email: data.email || firebaseUser.email,
-          role: data.role as UserRole,
-          classId: data.classId || '',
+          role: activeRole,
+          classId: activeClassId,
           createdAt: data.createdAt || new Date().toISOString(),
         };
+
+        // If the role was mismatched in the database, automatically correct it
+        if (data.role !== activeRole || data.classId !== activeClassId) {
+          await setDoc(userDocRef, {
+            role: activeRole,
+            classId: activeClassId
+          }, { merge: true });
+        }
       } else {
         // Check if there is a pre-registered user with this email (e.g. seeded wali kelas account)
         const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
@@ -107,13 +119,15 @@ export default function Login({ onLoginSuccess, appName, appDesc }: LoginProps) 
         if (!emailSnap.empty) {
           const preRegisteredDoc = emailSnap.docs[0];
           const preRegisteredData = preRegisteredDoc.data();
+          const activeRole = isDefaultAdmin ? UserRole.ADMIN : (preRegisteredData.role as UserRole);
+          const activeClassId = isDefaultAdmin ? '' : (preRegisteredData.classId || '');
           
           appUser = {
             id: firebaseUser.uid,
             name: preRegisteredData.name || firebaseUser.displayName || 'Wali Kelas Baru',
             email: firebaseUser.email,
-            role: preRegisteredData.role as UserRole,
-            classId: preRegisteredData.classId || '',
+            role: activeRole,
+            classId: activeClassId,
             createdAt: preRegisteredData.createdAt || new Date().toISOString(),
           };
 
@@ -131,8 +145,7 @@ export default function Login({ onLoginSuccess, appName, appDesc }: LoginProps) 
             await deleteDoc(doc(db, 'users', preRegisteredDoc.id));
           }
         } else {
-          // Only abdulazizitn@gmail.com becomes ADMIN by default, others become WALI_KELAS
-          const isDefaultAdmin = firebaseUser.email.toLowerCase() === 'abdulazizitn@gmail.com';
+          // Only default admins become ADMIN, others become WALI_KELAS
           const role = isDefaultAdmin ? UserRole.ADMIN : UserRole.WALI_KELAS;
           const defaultClassId = isDefaultAdmin ? '' : 'XI-RPL-1'; // Default class for testing if Wali Kelas
 
