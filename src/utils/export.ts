@@ -1,3 +1,6 @@
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+
 /**
  * Export data to CSV compatible with Microsoft Excel
  */
@@ -29,12 +32,22 @@ export function exportToCSV(filename: string, headers: string[], rows: string[][
 /**
  * Custom PDF Printing using Window Print
  */
-export function printData(title: string, tableHeaders: string[], tableRows: string[][], additionalMeta?: { label: string; value: string }[]) {
+export async function printData(title: string, tableHeaders: string[], tableRows: string[][], additionalMeta?: { label: string; value: string }[]) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
-  const appName = localStorage.getItem('appName') || 'SIWALI';
-  const appDesc = localStorage.getItem('appDesc') || 'Aplikasi Manajemen Wali Kelas SMA/SMK';
+  let appName = 'SIWALI';
+  let appDesc = 'Aplikasi Manajemen Wali Kelas SMA/SMK';
+  try {
+    const docSnap = await getDoc(doc(db, 'settings', 'app'));
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      appName = data.appName || 'SIWALI';
+      appDesc = data.appDesc || 'Aplikasi Manajemen Wali Kelas SMA/SMK';
+    }
+  } catch (err) {
+    console.error('Error fetching settings for print:', err);
+  }
 
   const metaHtml = additionalMeta && additionalMeta.length > 0
     ? `<div style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; color: #4b5563;">

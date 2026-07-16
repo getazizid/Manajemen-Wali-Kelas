@@ -31,8 +31,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [classesList, setClassesList] = useState<string[]>(['XI-RPL-1', 'XI-RPL-2', 'X-TKJ-1']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [appName, setAppName] = useState<string>(localStorage.getItem('appName') || 'SIWALI');
-  const [appDesc, setAppDesc] = useState<string>(localStorage.getItem('appDesc') || 'Manajemen Wali Kelas');
+  const [appName, setAppName] = useState<string>('SIWALI');
+  const [appDesc, setAppDesc] = useState<string>('Manajemen Wali Kelas');
 
   useEffect(() => {
     // 0. Fetch App Settings
@@ -41,12 +41,8 @@ export default function App() {
         const docSnap = await getDoc(doc(db, 'settings', 'app'));
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const name = data.appName || 'SIWALI';
-          const desc = data.appDesc || 'Manajemen Wali Kelas';
-          setAppName(name);
-          setAppDesc(desc);
-          localStorage.setItem('appName', name);
-          localStorage.setItem('appDesc', desc);
+          setAppName(data.appName || 'SIWALI');
+          setAppDesc(data.appDesc || 'Manajemen Wali Kelas');
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
@@ -110,9 +106,7 @@ export default function App() {
 
   useEffect(() => {
     document.title = appName;
-    localStorage.setItem('appName', appName);
-    localStorage.setItem('appDesc', appDesc);
-  }, [appName, appDesc]);
+  }, [appName]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
