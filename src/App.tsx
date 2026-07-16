@@ -236,6 +236,13 @@ export default function App() {
             </div>
           </div>
 
+          {/* User profile card (Access Rights / Info) */}
+          <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pengguna Aktif</p>
+            <p className="text-xs font-semibold text-white mt-1">{currentUser.name}</p>
+            <p className="text-[9px] text-indigo-400 font-mono mt-0.5 capitalize">{currentUser.role.replace('_', ' ')} {currentUser.classId && `| ${currentUser.classId}`}</p>
+          </div>
+
         </aside>
 
         {/* Mobile Navigation Drawer */}
@@ -274,6 +281,13 @@ export default function App() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* User profile card (Access Rights / Info) */}
+              <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 mt-auto">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pengguna Aktif</p>
+                <p className="text-xs font-semibold text-white mt-1">{currentUser.name}</p>
+                <p className="text-[9px] text-indigo-400 font-mono mt-0.5 capitalize">{currentUser.role.replace('_', ' ')} {currentUser.classId && `| ${currentUser.classId}`}</p>
               </div>
 
             </aside>
