@@ -317,8 +317,8 @@ export default function App() {
           {/* Footer / PDF Bar */}
           <footer className="h-10 bg-slate-900 px-6 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-850 shrink-0 z-10">
             <div className="flex gap-4 font-mono">
-              <span>Versi 1.0</span>
-              <span>Abdul Aziz</span>
+              <span>Versi 1.0. Created by getaziz.id</span>
+              <span>All rights reserved.</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Connected</span>
