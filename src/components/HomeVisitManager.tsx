@@ -26,6 +26,8 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
   const [page, setPage] = useState<number>(1);
   const itemsPerPage = 5;
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   // Form states
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showImporter, setShowImporter] = useState<boolean>(false);
@@ -96,6 +98,10 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
     fetchStudents();
     fetchVisits();
   }, [selectedClass]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [selectedClass, search]);
 
   // Search filter
   const filteredVisits = visits.filter(vis =>
@@ -204,6 +210,31 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
       fetchVisits();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} catatan kunjungan rumah yang terpilih?`)) return;
+    const path = 'home_visits';
+    try {
+      setLoading(true);
+      const promises = selectedIds.map(id => deleteDoc(doc(db, path, id)));
+      await Promise.all(promises);
+
+      await sendRealtimeNotification(
+        'Log Kunjungan Dihapus Massal',
+        `${selectedIds.length} catatan kunjungan rumah telah dihapus`,
+        NotificationType.VISIT,
+        selectedClass
+      );
+
+      setSelectedIds([]);
+      fetchVisits();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -352,8 +383,39 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
             className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
           />
         </div>
-        <div className="text-xs text-slate-500">
-          Kunjungan Dilakukan: <strong className="text-slate-800">{filteredVisits.length}</strong> kali
+        <div className="flex items-center gap-3">
+          {!isReadOnly && paginatedVisits.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs text-slate-600">
+              <input
+                type="checkbox"
+                id="select-all-visits"
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                checked={paginatedVisits.length > 0 && paginatedVisits.every(vis => selectedIds.includes(vis.id!))}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    const toAdd = paginatedVisits.map(vis => vis.id!).filter(id => !selectedIds.includes(id));
+                    setSelectedIds([...selectedIds, ...toAdd]);
+                  } else {
+                    const toRemove = paginatedVisits.map(vis => vis.id!);
+                    setSelectedIds(selectedIds.filter(id => !toRemove.includes(id)));
+                  }
+                }}
+              />
+              <label htmlFor="select-all-visits" className="cursor-pointer select-none text-[11px] font-semibold text-slate-600">Pilih Semua</label>
+            </div>
+          )}
+          {selectedIds.length > 0 && !isReadOnly && (
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Hapus Terpilih ({selectedIds.length})
+            </button>
+          )}
+          <div className="text-xs text-slate-500">
+            Kunjungan Dilakukan: <strong className="text-slate-800">{filteredVisits.length}</strong> kali
+          </div>
         </div>
       </div>
 
@@ -382,7 +444,23 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-slate-800">{vis.studentName}</h4>
+                      <div className="flex items-center gap-2">
+                        {!isReadOnly && (
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                            checked={selectedIds.includes(vis.id!)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds([...selectedIds, vis.id!]);
+                              } else {
+                                setSelectedIds(selectedIds.filter(id => id !== vis.id));
+                              }
+                            }}
+                          />
+                        )}
+                        <h4 className="text-xs font-bold text-slate-800">{vis.studentName}</h4>
+                      </div>
                       <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-mono">
                         {new Date(vis.date).toLocaleDateString('id-ID')}
                       </span>

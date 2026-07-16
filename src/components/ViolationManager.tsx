@@ -26,6 +26,8 @@ export default function ViolationManager({ currentUser, classesList }: Violation
   const [page, setPage] = useState<number>(1);
   const itemsPerPage = 6;
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   // Form states
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showImporter, setShowImporter] = useState<boolean>(false);
@@ -98,6 +100,10 @@ export default function ViolationManager({ currentUser, classesList }: Violation
     fetchStudents();
     fetchViolations();
   }, [selectedClass]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [selectedClass, search]);
 
   // Search filter
   const filteredViolations = violations.filter(vio =>
@@ -209,6 +215,31 @@ export default function ViolationManager({ currentUser, classesList }: Violation
       fetchViolations();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} catatan pelanggaran yang terpilih?`)) return;
+    const path = 'violations';
+    try {
+      setLoading(true);
+      const promises = selectedIds.map(id => deleteDoc(doc(db, path, id)));
+      await Promise.all(promises);
+
+      await sendRealtimeNotification(
+        'Catatan Pelanggaran Dihapus Massal',
+        `${selectedIds.length} catatan pelanggaran telah dihapus`,
+        NotificationType.PELANGGARAN,
+        selectedClass
+      );
+
+      setSelectedIds([]);
+      fetchViolations();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -369,8 +400,19 @@ export default function ViolationManager({ currentUser, classesList }: Violation
             className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
           />
         </div>
-        <div className="text-xs text-slate-500">
-          Kasus Tercatat: <strong className="text-slate-800">{filteredViolations.length}</strong> kasus
+        <div className="flex items-center gap-3">
+          {selectedIds.length > 0 && !isReadOnly && (
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Hapus Terpilih ({selectedIds.length})
+            </button>
+          )}
+          <div className="text-xs text-slate-500">
+            Kasus Tercatat: <strong className="text-slate-800">{filteredViolations.length}</strong> kasus
+          </div>
         </div>
       </div>
 
@@ -384,6 +426,24 @@ export default function ViolationManager({ currentUser, classesList }: Violation
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-semibold uppercase tracking-wider bg-slate-50/30">
+                {!isReadOnly && (
+                  <th className="py-3 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                      checked={paginatedViolations.length > 0 && paginatedViolations.every(vio => selectedIds.includes(vio.id!))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const toAdd = paginatedViolations.map(vio => vio.id!).filter(id => !selectedIds.includes(id));
+                          setSelectedIds([...selectedIds, ...toAdd]);
+                        } else {
+                          const toRemove = paginatedViolations.map(vio => vio.id!);
+                          setSelectedIds(selectedIds.filter(id => !toRemove.includes(id)));
+                        }
+                      }}
+                    />
+                  </th>
+                )}
                 <th className="py-3 px-6">Siswa</th>
                 <th className="py-3 px-4">Jenis Pelanggaran</th>
                 <th className="py-3 px-4">Kategori / Poin</th>
@@ -394,6 +454,22 @@ export default function ViolationManager({ currentUser, classesList }: Violation
             <tbody className="divide-y divide-slate-50 text-slate-700 text-xs">
               {paginatedViolations.map((vio) => (
                 <tr key={vio.id} className="hover:bg-slate-50/50 transition">
+                  {!isReadOnly && (
+                    <td className="py-4 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                        checked={selectedIds.includes(vio.id!)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds([...selectedIds, vio.id!]);
+                          } else {
+                            setSelectedIds(selectedIds.filter(id => id !== vio.id));
+                          }
+                        }}
+                      />
+                    </td>
+                  )}
                   <td className="py-4 px-6 font-semibold text-slate-800">
                     {vio.studentName}
                   </td>

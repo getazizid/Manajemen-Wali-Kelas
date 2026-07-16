@@ -23,6 +23,8 @@ export default function ClassManager({ currentUser, onClassesChange }: ClassMana
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   // Form states
   const [showModal, setShowModal] = useState<boolean>(false);
   const [formType, setFormType] = useState<'create' | 'update'>('create');
@@ -83,6 +85,10 @@ export default function ClassManager({ currentUser, onClassesChange }: ClassMana
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [search]);
 
   const filteredClasses = classes.filter(cls =>
     cls.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -168,6 +174,23 @@ export default function ClassManager({ currentUser, onClassesChange }: ClassMana
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedIds.length} kelas terpilih? Semua murid, denah kursi, dan data di kelas-kelas ini mungkin perlu disesuaikan.`)) return;
+    const path = 'classes';
+    try {
+      setLoading(true);
+      const promises = selectedIds.map(id => deleteDoc(doc(db, path, id)));
+      await Promise.all(promises);
+      setSelectedIds([]);
+      fetchData();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       {/* Header */}
@@ -198,8 +221,19 @@ export default function ClassManager({ currentUser, onClassesChange }: ClassMana
             className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700"
           />
         </div>
-        <div className="text-xs text-slate-500">
-          Total Kelas: <strong className="text-slate-800">{filteredClasses.length}</strong> kelas
+        <div className="flex items-center gap-3">
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Hapus Terpilih ({selectedIds.length})
+            </button>
+          )}
+          <div className="text-xs text-slate-500">
+            Total Kelas: <strong className="text-slate-800">{filteredClasses.length}</strong> kelas
+          </div>
         </div>
       </div>
 
@@ -213,6 +247,22 @@ export default function ClassManager({ currentUser, onClassesChange }: ClassMana
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-semibold uppercase tracking-wider bg-slate-50/30">
+                <th className="py-3 px-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                    checked={filteredClasses.length > 0 && filteredClasses.every(cls => selectedIds.includes(cls.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const toAdd = filteredClasses.map(cls => cls.id).filter(id => !selectedIds.includes(id));
+                        setSelectedIds([...selectedIds, ...toAdd]);
+                      } else {
+                        const toRemove = filteredClasses.map(cls => cls.id);
+                        setSelectedIds(selectedIds.filter(id => !toRemove.includes(id)));
+                      }
+                    }}
+                  />
+                </th>
                 <th className="py-3 px-6">Kode Kelas</th>
                 <th className="py-3 px-4">Nama Lengkap Kelas</th>
                 <th className="py-3 px-4">Wali Kelas</th>
@@ -222,6 +272,20 @@ export default function ClassManager({ currentUser, onClassesChange }: ClassMana
             <tbody className="divide-y divide-slate-50 text-slate-700 text-xs">
               {filteredClasses.map((cls) => (
                 <tr key={cls.id} className="hover:bg-slate-50/50 transition">
+                  <td className="py-4 px-4 text-center">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-3.5 w-3.5 cursor-pointer"
+                      checked={selectedIds.includes(cls.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds([...selectedIds, cls.id]);
+                        } else {
+                          setSelectedIds(selectedIds.filter(id => id !== cls.id));
+                        }
+                      }}
+                    />
+                  </td>
                   <td className="py-4 px-6 font-bold text-indigo-600 flex items-center gap-2">
                     <School className="h-4 w-4 text-indigo-500/80" />
                     {cls.id}
