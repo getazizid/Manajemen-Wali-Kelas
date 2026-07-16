@@ -25,7 +25,8 @@ export default function UserManager({ currentUser, classesList }: UserManagerPro
     name: '',
     email: '',
     role: UserRole.WALI_KELAS,
-    classId: ''
+    classId: '',
+    password: '' // Added password field
   });
 
   const fetchUsers = async () => {
@@ -71,7 +72,8 @@ export default function UserManager({ currentUser, classesList }: UserManagerPro
       name: '',
       email: '',
       role: UserRole.WALI_KELAS,
-      classId: classesList[0] || ''
+      classId: classesList[0] || '',
+      password: '' // Reset password field
     });
     setEditingId(null);
     setShowModal(true);
@@ -84,7 +86,8 @@ export default function UserManager({ currentUser, classesList }: UserManagerPro
       name: usr.name,
       email: usr.email,
       role: usr.role,
-      classId: usr.classId || ''
+      classId: usr.classId || '',
+      password: '' // Empty for editing
     });
     setEditingId(usr.id || null);
     setShowModal(true);
@@ -99,10 +102,33 @@ export default function UserManager({ currentUser, classesList }: UserManagerPro
 
     const path = 'users';
     try {
-      // For creation, if we don't specify custom UID, generate a placeholder
-      const targetUid = formType === 'create' 
-        ? (formData.uid.trim() || `usr_${Date.now()}`)
-        : editingId!;
+      let targetUid = editingId!;
+
+      if (formType === 'create') {
+        if (!formData.password || formData.password.length < 6) {
+          alert('Password wajib diisi minimal 6 karakter.');
+          return;
+        }
+
+        // Create user in Firebase Authentication using a temporary app instance
+        // so that the current logged in Admin is NOT logged out!
+        try {
+          const { initializeApp } = await import('firebase/app');
+          const { getAuth, createUserWithEmailAndPassword } = await import('firebase/auth');
+          
+          const tempAppName = `temp-app-${Date.now()}`;
+          const tempApp = initializeApp(db.app.options, tempAppName);
+          const tempAuth = getAuth(tempApp);
+          
+          const userCred = await createUserWithEmailAndPassword(tempAuth, formData.email, formData.password);
+          targetUid = userCred.user.uid;
+          await tempApp.delete();
+        } catch (authErr: any) {
+          console.error('Error creating Auth user:', authErr);
+          alert(`Gagal membuat akun autentikasi: ${authErr.message || String(authErr)}`);
+          return;
+        }
+      }
 
       const payload = {
         name: formData.name,
@@ -339,6 +365,21 @@ export default function UserManager({ currentUser, classesList }: UserManagerPro
                   placeholder="email@sekolah.sch.id"
                 />
               </div>
+
+              {formType === 'create' && (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Password *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 font-semibold"
+                    placeholder="Minimal 6 karakter"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
