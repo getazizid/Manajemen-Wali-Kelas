@@ -77,7 +77,7 @@ service cloud.firestore {
 
     // Settings Collection
     match /settings/{settingId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isSignedIn() && isAdmin();
     }
 
