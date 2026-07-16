@@ -5,18 +5,20 @@ import { Settings, Save, CheckCircle } from 'lucide-react';
 
 interface SettingsManagerProps {
   appName: string;
-  onAppNameChange: (newAppName: string) => void;
+  appDesc: string;
+  onSettingsChange: (newAppName: string, newAppDesc: string) => void;
 }
 
-export default function SettingsManager({ appName, onAppNameChange }: SettingsManagerProps) {
+export default function SettingsManager({ appName, appDesc, onSettingsChange }: SettingsManagerProps) {
   const [currentAppName, setCurrentAppName] = useState<string>(appName);
+  const [currentAppDesc, setCurrentAppDesc] = useState<string>(appDesc);
   const [loading, setLoading] = useState<boolean>(false);
   const [status, setStatus] = useState<'success' | 'error' | null>(null);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentAppName.trim()) {
-      alert('Nama aplikasi tidak boleh kosong.');
+    if (!currentAppName.trim() || !currentAppDesc.trim()) {
+      alert('Nama aplikasi dan deskripsi tidak boleh kosong.');
       return;
     }
 
@@ -25,10 +27,11 @@ export default function SettingsManager({ appName, onAppNameChange }: SettingsMa
     try {
       await setDoc(doc(db, 'settings', 'app'), {
         appName: currentAppName.trim(),
+        appDesc: currentAppDesc.trim(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
-      onAppNameChange(currentAppName.trim());
+      onSettingsChange(currentAppName.trim(), currentAppDesc.trim());
       setStatus('success');
       setTimeout(() => setStatus(null), 3000);
     } catch (err) {
@@ -54,10 +57,10 @@ export default function SettingsManager({ appName, onAppNameChange }: SettingsMa
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSave} className="p-6 space-y-6">
+      <form onSubmit={handleSave} className="p-6 space-y-5">
         <div>
           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-            Nama Aplikasi (Akan merubah semua header dan logo)
+            Nama Aplikasi (Judul Utama)
           </label>
           <input
             type="text"
@@ -69,7 +72,25 @@ export default function SettingsManager({ appName, onAppNameChange }: SettingsMa
             placeholder="Contoh: SIWALI"
           />
           <p className="text-[9px] text-slate-400 mt-1.5 font-medium">
-            Nama ini akan digunakan pada tab browser, logo sidebar, layar loading, dan halaman autentikasi masuk.
+            Nama ini digunakan pada tab browser, logo sidebar, layar loading, dan judul halaman login.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Deskripsi Aplikasi (Sub-judul)
+          </label>
+          <input
+            type="text"
+            required
+            maxLength={100}
+            value={currentAppDesc}
+            onChange={(e) => setCurrentAppDesc(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800"
+            placeholder="Contoh: Manajemen Wali Kelas"
+          />
+          <p className="text-[9px] text-slate-400 mt-1.5 font-medium">
+            Deskripsi ini digunakan di bawah logo sidebar dan sub-judul halaman login.
           </p>
         </div>
 
@@ -77,14 +98,14 @@ export default function SettingsManager({ appName, onAppNameChange }: SettingsMa
         <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
           <div>
             {status === 'success' && (
-              <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+              <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 animate-fade-in">
                 <CheckCircle className="h-4 w-4" />
                 Pengaturan berhasil disimpan!
               </span>
             )}
             {status === 'error' && (
-              <span className="text-xs text-red-600 font-semibold bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                Gagal menyimpan data ke Firestore.
+              <span className="text-xs text-red-600 font-semibold bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 animate-fade-in">
+                Gagal menyimpan ke Firestore. Periksa Rules Anda.
               </span>
             )}
           </div>

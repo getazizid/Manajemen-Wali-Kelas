@@ -34,6 +34,7 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [seedingStatus, setSeedingStatus] = useState<string | null>(null);
   const [appName, setAppName] = useState<string>('SIWALI');
+  const [appDesc, setAppDesc] = useState<string>('Manajemen Wali Kelas');
 
   useEffect(() => {
     // 0. Fetch App Settings
@@ -41,8 +42,9 @@ export default function App() {
       try {
         const docSnap = await getDoc(doc(db, 'settings', 'app'));
         if (docSnap.exists()) {
-          const name = docSnap.data().appName || 'SIWALI';
-          setAppName(name);
+          const data = docSnap.data();
+          setAppName(data.appName || 'SIWALI');
+          setAppDesc(data.appDesc || 'Manajemen Wali Kelas');
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
@@ -154,7 +156,7 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <Login onLoginSuccess={handleLoginSuccess} appName={appName} />;
+    return <Login onLoginSuccess={handleLoginSuccess} appName={appName} appDesc={appDesc} />;
   }
 
   // Sidebar navigation menu items
@@ -195,7 +197,7 @@ export default function App() {
             <div>
               <h1 className="text-sm font-extrabold text-slate-900 tracking-tight leading-tight">{appName}</h1>
               <p className="text-[9px] text-indigo-600 font-bold tracking-wider uppercase">
-                {appName === 'SIWALI' ? 'Manajemen Wali Kelas' : 'Sistem Manajemen'}
+                {appDesc}
               </p>
             </div>
           </div>
@@ -370,7 +372,7 @@ export default function App() {
             {activeTab === 'visit' && <HomeVisitManager currentUser={currentUser} classesList={classesList} />}
             {activeTab === 'classes' && currentUser.role === UserRole.ADMIN && <ClassManager currentUser={currentUser} onClassesChange={setClassesList} />}
             {activeTab === 'users' && currentUser.role === UserRole.ADMIN && <UserManager currentUser={currentUser} classesList={classesList} />}
-            {activeTab === 'settings' && currentUser.role === UserRole.ADMIN && <SettingsManager appName={appName} onAppNameChange={setAppName} />}
+            {activeTab === 'settings' && currentUser.role === UserRole.ADMIN && <SettingsManager appName={appName} appDesc={appDesc} onSettingsChange={(name, desc) => { setAppName(name); setAppDesc(desc); }} />}
             
             {activeTab === 'loading' && (
               <div className="py-40 text-center text-slate-400 text-xs">Memuat ulang modul...</div>

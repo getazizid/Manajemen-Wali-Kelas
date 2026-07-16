@@ -8,9 +8,10 @@ import { School, LogIn, ShieldAlert, Mail, Lock } from 'lucide-react';
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
   appName: string;
+  appDesc: string;
 }
 
-export default function Login({ onLoginSuccess, appName }: LoginProps) {
+export default function Login({ onLoginSuccess, appName, appDesc }: LoginProps) {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -143,7 +144,7 @@ export default function Login({ onLoginSuccess, appName }: LoginProps) {
           {appName}
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-          Sistem Manajemen Wali Kelas SMA/SMK
+          {appDesc}
         </p>
       </div>
 
