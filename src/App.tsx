@@ -3,7 +3,6 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { User, UserRole } from './types';
-import { seedDatabaseIfEmpty } from './utils/seeder';
 
 // Components
 import Login from './components/Login';
@@ -21,9 +20,9 @@ import ClassManager from './components/ClassManager';
 import SettingsManager from './components/SettingsManager';
 
 // Icons
-import { 
-  School, LogOut, LayoutDashboard, Users, UserCheck, Armchair, 
-  Archive, Trophy, ShieldAlert, Home, UserCog, Database, Menu, X, CheckCircle, Settings
+import {
+  School, LogOut, LayoutDashboard, Users, UserCheck, Armchair,
+  Archive, Trophy, ShieldAlert, Home, UserCog, Menu, X, Settings
 } from 'lucide-react';
 
 export default function App() {
@@ -32,7 +31,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [classesList, setClassesList] = useState<string[]>(['XI-RPL-1', 'XI-RPL-2', 'X-TKJ-1']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
-  const [seedingStatus, setSeedingStatus] = useState<string | null>(null);
   const [appName, setAppName] = useState<string>('SIWALI');
   const [appDesc, setAppDesc] = useState<string>('Manajemen Wali Kelas');
 
@@ -122,29 +120,7 @@ export default function App() {
     }
   };
 
-  // Run the seeder function manually
-  const handleSeedDatabase = async () => {
-    setSeedingStatus('seeding');
-    try {
-      await seedDatabaseIfEmpty();
-      setSeedingStatus('success');
-      setTimeout(() => setSeedingStatus(null), 3000);
-      // Fetch classes again to refresh state
-      const snap = await getDocs(collection(db, 'classes'));
-      if (snap.size > 0) {
-        const ids: string[] = [];
-        snap.forEach(d => ids.push(d.id));
-        setClassesList(ids);
-      }
-      // Reload current tab to sync UI
-      const prev = activeTab;
-      setActiveTab('loading');
-      setTimeout(() => setActiveTab(prev), 200);
-    } catch {
-      setSeedingStatus('error');
-      setTimeout(() => setSeedingStatus(null), 3000);
-    }
-  };
+
 
   if (authLoading) {
     return (
@@ -178,13 +154,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900">
-      
+
       {/* Dynamic Navigation Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
           {/* Mobile menu toggle */}
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-1.5 hover:bg-slate-50 border border-slate-200 text-slate-600 rounded-lg lg:hidden transition"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -232,7 +208,7 @@ export default function App() {
 
       {/* Main Container Layout */}
       <div className="flex-1 flex relative">
-        
+
         {/* Desktop Sidebar */}
         <aside className="w-64 bg-slate-900 text-slate-300 p-4 hidden lg:flex flex-col justify-between shrink-0 border-r border-slate-850">
           <div className="space-y-4">
@@ -246,11 +222,10 @@ export default function App() {
                     <button
                       key={item.id}
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                        isActive 
-                          ? 'bg-indigo-600 text-white shadow-sm' 
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${isActive
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        }`}
                     >
                       <Icon className={`h-4.5 w-4.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                       {item.label}
@@ -261,40 +236,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Seeder trigger in sidebar */}
-          <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Simulator</p>
-              <p className="text-xs font-semibold text-white mt-0.5">Andri Wijaya, S.Pd</p>
-              <p className="text-[9px] text-indigo-400">Kelas XII - RPL 2</p>
-            </div>
-            <button
-              onClick={handleSeedDatabase}
-              disabled={seedingStatus === 'seeding'}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 border rounded-lg text-[10px] font-bold transition-all ${
-                seedingStatus === 'success' ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400' :
-                seedingStatus === 'error' ? 'bg-red-600/20 border-red-500 text-red-400' :
-                'border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white bg-slate-900/50'
-              }`}
-            >
-              {seedingStatus === 'seeding' ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
-                  Memuat Data...
-                </>
-              ) : seedingStatus === 'success' ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                  Berhasil Dimuat!
-                </>
-              ) : (
-                <>
-                  <Database className="h-3.5 w-3.5 text-slate-400" />
-                  Seed Demo Data
-                </>
-              )}
-            </button>
-          </div>
         </aside>
 
         {/* Mobile Navigation Drawer */}
@@ -310,7 +251,7 @@ export default function App() {
                     <X className="h-5 w-5" />
                   </button>
                 </div>
-                
+
                 <div className="space-y-1">
                   {visibleMenuItems.map((item) => {
                     const Icon = item.icon;
@@ -322,11 +263,10 @@ export default function App() {
                           setActiveTab(item.id);
                           setMobileMenuOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
-                          isActive 
-                            ? 'bg-indigo-600 text-white' 
-                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                        }`}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors ${isActive
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          }`}
                       >
                         <Icon className={`h-4.5 w-4.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                         {item.label}
@@ -336,25 +276,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Seeder in mobile drawer */}
-              <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Simulator</p>
-                  <p className="text-xs font-semibold text-white mt-0.5">Andri Wijaya, S.Pd</p>
-                  <p className="text-[9px] text-indigo-400">Kelas XII - RPL 2</p>
-                </div>
-                <button
-                  onClick={() => {
-                    handleSeedDatabase();
-                    setMobileMenuOpen(false);
-                  }}
-                  disabled={seedingStatus === 'seeding'}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white bg-slate-900/50 rounded-lg text-[10px] font-bold transition-colors"
-                >
-                  <Database className="h-3.5 w-3.5 text-slate-400" />
-                  Seed Demo Data
-                </button>
-              </div>
             </aside>
           </>
         )}
@@ -373,7 +294,7 @@ export default function App() {
             {activeTab === 'classes' && currentUser.role === UserRole.ADMIN && <ClassManager currentUser={currentUser} onClassesChange={setClassesList} />}
             {activeTab === 'users' && currentUser.role === UserRole.ADMIN && <UserManager currentUser={currentUser} classesList={classesList} />}
             {activeTab === 'settings' && currentUser.role === UserRole.ADMIN && <SettingsManager appName={appName} appDesc={appDesc} onSettingsChange={(name, desc) => { setAppName(name); setAppDesc(desc); }} />}
-            
+
             {activeTab === 'loading' && (
               <div className="py-40 text-center text-slate-400 text-xs">Memuat ulang modul...</div>
             )}
@@ -382,8 +303,8 @@ export default function App() {
           {/* Footer / PDF Bar */}
           <footer className="h-10 bg-slate-900 px-6 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-850 shrink-0 z-10">
             <div className="flex gap-4 font-mono">
-              <span>v1.0.4 Release</span>
-              <span>Server: Firebase Global</span>
+              <span>Versi 1.0</span>
+              <span>Abdul Aziz</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Connected</span>
