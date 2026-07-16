@@ -17,11 +17,13 @@ import AchievementManager from './components/AchievementManager';
 import ViolationManager from './components/ViolationManager';
 import HomeVisitManager from './components/HomeVisitManager';
 import UserManager from './components/UserManager';
+import ClassManager from './components/ClassManager';
+import SettingsManager from './components/SettingsManager';
 
 // Icons
 import { 
   School, LogOut, LayoutDashboard, Users, UserCheck, Armchair, 
-  Archive, Trophy, ShieldAlert, Home, UserCog, Database, Menu, X, CheckCircle 
+  Archive, Trophy, ShieldAlert, Home, UserCog, Database, Menu, X, CheckCircle, Settings
 } from 'lucide-react';
 
 export default function App() {
@@ -31,8 +33,23 @@ export default function App() {
   const [classesList, setClassesList] = useState<string[]>(['XI-RPL-1', 'XI-RPL-2', 'X-TKJ-1']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [seedingStatus, setSeedingStatus] = useState<string | null>(null);
+  const [appName, setAppName] = useState<string>('SIWALI');
 
   useEffect(() => {
+    // 0. Fetch App Settings
+    const fetchSettings = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'app'));
+        if (docSnap.exists()) {
+          const name = docSnap.data().appName || 'SIWALI';
+          setAppName(name);
+        }
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
+    };
+    fetchSettings();
+
     // 1. Listen for standard Firebase Auth states
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
@@ -64,17 +81,7 @@ export default function App() {
           console.error('Error fetching user profile:', error);
         }
       } else {
-        // Look for localized demo session in localStorage for convenient testing inside previews
-        const savedSession = localStorage.getItem('siwali_demo_user');
-        if (savedSession) {
-          try {
-            setCurrentUser(JSON.parse(savedSession));
-          } catch {
-            setCurrentUser(null);
-          }
-        } else {
-          setCurrentUser(null);
-        }
+        setCurrentUser(null);
       }
       setAuthLoading(false);
     });
@@ -97,18 +104,17 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    document.title = appName;
+  }, [appName]);
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
-    // If it's a demo login, persist to localStorage to maintain session across iframe refreshes!
-    if (user.id?.endsWith('_demo') || user.id?.startsWith('wali_')) {
-      localStorage.setItem('siwali_demo_user', JSON.stringify(user));
-    }
   };
 
   const handleLogout = async () => {
     if (confirm('Apakah Anda yakin ingin keluar dari aplikasi?')) {
       await signOut(auth);
-      localStorage.removeItem('siwali_demo_user');
       setCurrentUser(null);
       setActiveTab('dashboard');
     }
@@ -142,13 +148,13 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-xs text-slate-500 font-semibold mt-4">Inisialisasi Sistem Keamanan SIWALI...</span>
+        <span className="text-xs text-slate-500 font-semibold mt-4">Inisialisasi Sistem Keamanan {appName}...</span>
       </div>
     );
   }
 
   if (!currentUser) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} appName={appName} />;
   }
 
   // Sidebar navigation menu items
@@ -161,7 +167,9 @@ export default function App() {
     { id: 'prestasi', label: 'Prestasi Murid', icon: Trophy, roles: [UserRole.ADMIN, UserRole.KEPALA_SEKOLAH, UserRole.WALI_KELAS] },
     { id: 'pelanggaran', label: 'Pelanggaran Murid', icon: ShieldAlert, roles: [UserRole.ADMIN, UserRole.KEPALA_SEKOLAH, UserRole.WALI_KELAS] },
     { id: 'visit', label: 'Home Visit Log', icon: Home, roles: [UserRole.ADMIN, UserRole.KEPALA_SEKOLAH, UserRole.WALI_KELAS] },
+    { id: 'classes', label: 'Manajemen Kelas', icon: School, roles: [UserRole.ADMIN] },
     { id: 'users', label: 'Manajemen Pengguna', icon: UserCog, roles: [UserRole.ADMIN] },
+    { id: 'settings', label: 'Pengaturan Aplikasi', icon: Settings, roles: [UserRole.ADMIN] },
   ];
 
   const visibleMenuItems = menuItems.filter(item => item.roles.includes(currentUser.role));
@@ -185,8 +193,10 @@ export default function App() {
               <School className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-sm font-extrabold text-slate-900 tracking-tight leading-tight">SIWALI</h1>
-              <p className="text-[9px] text-indigo-600 font-bold tracking-wider uppercase">Manajemen Wali Kelas</p>
+              <h1 className="text-sm font-extrabold text-slate-900 tracking-tight leading-tight">{appName}</h1>
+              <p className="text-[9px] text-indigo-600 font-bold tracking-wider uppercase">
+                {appName === 'SIWALI' ? 'Manajemen Wali Kelas' : 'Sistem Manajemen'}
+              </p>
             </div>
           </div>
         </div>
@@ -358,7 +368,9 @@ export default function App() {
             {activeTab === 'prestasi' && <AchievementManager currentUser={currentUser} classesList={classesList} />}
             {activeTab === 'pelanggaran' && <ViolationManager currentUser={currentUser} classesList={classesList} />}
             {activeTab === 'visit' && <HomeVisitManager currentUser={currentUser} classesList={classesList} />}
+            {activeTab === 'classes' && currentUser.role === UserRole.ADMIN && <ClassManager currentUser={currentUser} onClassesChange={setClassesList} />}
             {activeTab === 'users' && currentUser.role === UserRole.ADMIN && <UserManager currentUser={currentUser} classesList={classesList} />}
+            {activeTab === 'settings' && currentUser.role === UserRole.ADMIN && <SettingsManager appName={appName} onAppNameChange={setAppName} />}
             
             {activeTab === 'loading' && (
               <div className="py-40 text-center text-slate-400 text-xs">Memuat ulang modul...</div>
