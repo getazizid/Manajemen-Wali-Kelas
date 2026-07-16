@@ -47,7 +47,10 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
   const fetchStudents = async () => {
     const path = 'students';
     try {
-      const q = query(collection(db, path), where('classId', '==', selectedClass));
+      let q = query(collection(db, path));
+      if (selectedClass !== 'ALL') {
+        q = query(collection(db, path), where('classId', '==', selectedClass));
+      }
       const snapshot = await getDocs(q);
       const list: Student[] = [];
       snapshot.forEach(docSnap => {
@@ -65,7 +68,7 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
     const path = 'home_visits';
     try {
       let q = query(collection(db, path));
-      if (selectedClass) {
+      if (selectedClass && selectedClass !== 'ALL') {
         q = query(collection(db, path), where('classId', '==', selectedClass));
       }
       const snapshot = await getDocs(q);
@@ -154,7 +157,7 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
       const payload = {
         studentId: formData.studentId,
         studentName: selectedStudent.name,
-        classId: selectedClass,
+        classId: selectedStudent.classId,
         date: formData.date,
         purpose: formData.purpose,
         result: formData.result,
@@ -171,7 +174,7 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
           'Kunjungan Rumah (Home Visit)',
           `Wali Kelas melakukan kunjungan rumah ke kediaman siswa ${selectedStudent.name}`,
           NotificationType.VISIT,
-          selectedClass
+          selectedStudent.classId
         );
       } else if (formType === 'update' && editingId) {
         const original = visits.find(v => v.id === editingId);
@@ -181,10 +184,10 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
         }, { merge: true });
 
         await sendRealtimeNotification(
-          'Log Kunjungan Diperbarui',
-          `Log kunjungan rumah siswa ${selectedStudent.name} telah diupdate`,
+          'Kunjungan Rumah (Home Visit) Diperbarui',
+          `Log kunjungan rumah untuk ${selectedStudent.name} telah diperbarui`,
           NotificationType.VISIT,
-          selectedClass
+          selectedStudent.classId
         );
       }
       setShowModal(false);
@@ -195,16 +198,18 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Hapus catatan kunjungan rumah siswa ${name}?`)) return;
+    if (!confirm(`Hapus log kunjungan rumah untuk siswa ${name}?`)) return;
     const path = 'home_visits';
     try {
+      const original = visits.find(v => v.id === id);
+      const targetClass = original?.classId || selectedClass;
       await deleteDoc(doc(db, path, id));
-
+      
       await sendRealtimeNotification(
-        'Log Kunjungan Dihapus',
-        `Log kunjungan rumah untuk ${name} telah dihapus`,
+        'Kunjungan Rumah (Home Visit) Dihapus',
+        `Log kunjungan rumah siswa ${name} telah dihapus dari database`,
         NotificationType.VISIT,
-        selectedClass
+        targetClass
       );
 
       fetchVisits();
@@ -239,32 +244,34 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
   };
 
   const handleExport = () => {
-    const headers = ['Nama Siswa', 'Tanggal Kunjungan', 'Tujuan', 'Hasil Pembahasan', 'Link Foto'];
+    const headers = ['Nama Siswa', 'Kelas', 'Tanggal Kunjungan', 'Tujuan', 'Hasil Pembahasan', 'Link Foto'];
     const rows = filteredVisits.map(v => [
       v.studentName,
+      v.classId,
       v.date,
       v.purpose,
       v.result,
       v.documentationUrl || '-'
     ]);
-    exportToCSV(`Kunjungan_Rumah_Kelas_${selectedClass}`, headers, rows);
+    exportToCSV(`Kunjungan_Rumah_${selectedClass === 'ALL' ? 'Semua_Kelas' : `Kelas_${selectedClass}`}`, headers, rows);
   };
 
   const handlePrint = () => {
-    const headers = ['No', 'Nama Siswa', 'Tanggal', 'Tujuan Kunjungan', 'Hasil Kunjungan & Kesepakatan'];
+    const headers = ['No', 'Nama Siswa', 'Kelas', 'Tanggal', 'Tujuan Kunjungan', 'Hasil Kunjungan & Kesepakatan'];
     const rows = filteredVisits.map((v, idx) => [
       String(idx + 1),
       v.studentName,
+      v.classId,
       v.date,
       v.purpose,
       v.result
     ]);
     printData(
-      `Daftar Kunjungan Rumah (Home Visit) Kelas ${selectedClass}`,
+      `Daftar Kunjungan Rumah (Home Visit) ${selectedClass === 'ALL' ? 'Semua Kelas' : `Kelas ${selectedClass}`}`,
       headers,
       rows,
       [
-        { label: 'Kelas', value: selectedClass },
+        { label: 'Kelas', value: selectedClass === 'ALL' ? 'Semua Kelas' : selectedClass },
         { label: 'Total Kunjungan', value: `${filteredVisits.length} kali` }
       ]
     );
@@ -287,7 +294,7 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
       const payload = {
         studentId: student.id || '',
         studentName: student.name,
-        classId: selectedClass,
+        classId: student.classId,
         date,
         purpose,
         result,
@@ -301,7 +308,7 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
     await Promise.all(promises);
     await sendRealtimeNotification(
       'Import Home Visit Massal',
-      `Berhasil mengimpor ${parsedRows.length} catatan home visit kelas ${selectedClass}`,
+      `Berhasil mengimpor ${parsedRows.length} catatan home visit`,
       NotificationType.VISIT,
       selectedClass
     );
@@ -326,6 +333,7 @@ export default function HomeVisitManager({ currentUser, classesList }: HomeVisit
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="text-xs bg-transparent focus:outline-none font-medium text-slate-700"
               >
+                <option value="ALL">Semua Kelas</option>
                 {classesList.map(c => (
                   <option key={c} value={c}>Kelas {c}</option>
                 ))}

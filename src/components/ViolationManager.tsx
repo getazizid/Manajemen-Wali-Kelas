@@ -48,7 +48,10 @@ export default function ViolationManager({ currentUser, classesList }: Violation
   const fetchStudents = async () => {
     const path = 'students';
     try {
-      const q = query(collection(db, path), where('classId', '==', selectedClass));
+      let q = query(collection(db, path));
+      if (selectedClass !== 'ALL') {
+        q = query(collection(db, path), where('classId', '==', selectedClass));
+      }
       const snapshot = await getDocs(q);
       const list: Student[] = [];
       snapshot.forEach(docSnap => {
@@ -66,7 +69,7 @@ export default function ViolationManager({ currentUser, classesList }: Violation
     const path = 'violations';
     try {
       let q = query(collection(db, path));
-      if (selectedClass) {
+      if (selectedClass && selectedClass !== 'ALL') {
         q = query(collection(db, path), where('classId', '==', selectedClass));
       }
       const snapshot = await getDocs(q);
@@ -145,8 +148,8 @@ export default function ViolationManager({ currentUser, classesList }: Violation
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.studentId || !formData.violationName || formData.points < 1) {
-      alert('Nama siswa, jenis pelanggaran, dan poin wajib diisi.');
+    if (!formData.studentId || !formData.violationName) {
+      alert('Nama siswa dan pelanggaran wajib dipilih/diisi.');
       return;
     }
 
@@ -158,7 +161,7 @@ export default function ViolationManager({ currentUser, classesList }: Violation
       const payload = {
         studentId: formData.studentId,
         studentName: selectedStudent.name,
-        classId: selectedClass,
+        classId: selectedStudent.classId,
         violationName: formData.violationName,
         points: formData.points,
         category: formData.category,
@@ -173,10 +176,10 @@ export default function ViolationManager({ currentUser, classesList }: Violation
         });
 
         await sendRealtimeNotification(
-          'Pelanggaran Siswa Terbaca',
-          `Siswa ${selectedStudent.name} tercatat melakukan pelanggaran: "${formData.violationName}" (+${formData.points} Poin)`,
+          'Pelanggaran Siswa',
+          `${selectedStudent.name} tercatat melakukan pelanggaran: "${formData.violationName}"`,
           NotificationType.PELANGGARAN,
-          selectedClass
+          selectedStudent.classId
         );
       } else if (formType === 'update' && editingId) {
         const original = violations.find(v => v.id === editingId);
@@ -186,10 +189,10 @@ export default function ViolationManager({ currentUser, classesList }: Violation
         }, { merge: true });
 
         await sendRealtimeNotification(
-          'Data Pelanggaran Diperbarui',
-          `Catatan pelanggaran ${selectedStudent.name} telah disunting`,
+          'Pelanggaran Siswa Diperbarui',
+          `Log pelanggaran untuk ${selectedStudent.name} telah diperbarui`,
           NotificationType.PELANGGARAN,
-          selectedClass
+          selectedStudent.classId
         );
       }
       setShowModal(false);
@@ -200,16 +203,18 @@ export default function ViolationManager({ currentUser, classesList }: Violation
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Hapus catatan pelanggaran untuk siswa ${name}?`)) return;
+    if (!confirm(`Hapus log pelanggaran untuk ${name}?`)) return;
     const path = 'violations';
     try {
+      const original = violations.find(v => v.id === id);
+      const targetClass = original?.classId || selectedClass;
       await deleteDoc(doc(db, path, id));
-
+      
       await sendRealtimeNotification(
-        'Catatan Pelanggaran Dihapus',
-        `Catatan pelanggaran siswa ${name} telah dihapus`,
+        'Pelanggaran Siswa Dihapus',
+        `Catatan ketertiban siswa ${name} telah dihapus dari sistem`,
         NotificationType.PELANGGARAN,
-        selectedClass
+        targetClass
       );
 
       fetchViolations();
@@ -244,34 +249,36 @@ export default function ViolationManager({ currentUser, classesList }: Violation
   };
 
   const handleExport = () => {
-    const headers = ['Nama Siswa', 'Jenis Pelanggaran', 'Poin', 'Kategori', 'Tanggal', 'Tindakan Sekolah'];
+    const headers = ['Nama Siswa', 'Kelas', 'Jenis Pelanggaran', 'Poin', 'Kategori', 'Tanggal', 'Tindakan'];
     const rows = filteredViolations.map(v => [
       v.studentName,
+      v.classId,
       v.violationName,
       String(v.points),
       v.category,
       v.date,
       v.actionTaken
     ]);
-    exportToCSV(`Pelanggaran_Siswa_Kelas_${selectedClass}`, headers, rows);
+    exportToCSV(`Pelanggaran_Siswa_${selectedClass === 'ALL' ? 'Semua_Kelas' : `Kelas_${selectedClass}`}`, headers, rows);
   };
 
   const handlePrint = () => {
-    const headers = ['No', 'Nama Siswa', 'Bentuk Pelanggaran', 'Kategori', 'Poin', 'Tindakan'];
+    const headers = ['No', 'Nama Siswa', 'Kelas', 'Pelanggaran', 'Poin', 'Kategori', 'Tanggal'];
     const rows = filteredViolations.map((v, idx) => [
       String(idx + 1),
       v.studentName,
+      v.classId,
       v.violationName,
+      String(v.points),
       v.category,
-      `${v.points} Poin`,
-      v.actionTaken
+      v.date
     ]);
     printData(
-      `Daftar Pelanggaran Siswa Kelas ${selectedClass}`,
+      `Daftar Pelanggaran Siswa ${selectedClass === 'ALL' ? 'Semua Kelas' : `Kelas ${selectedClass}`}`,
       headers,
       rows,
       [
-        { label: 'Kelas', value: selectedClass },
+        { label: 'Kelas', value: selectedClass === 'ALL' ? 'Semua Kelas' : selectedClass },
         { label: 'Total Pelanggaran', value: `${filteredViolations.length} kasus` }
       ]
     );
@@ -303,7 +310,7 @@ export default function ViolationManager({ currentUser, classesList }: Violation
       const payload = {
         studentId: student.id || '',
         studentName: student.name,
-        classId: selectedClass,
+        classId: student.classId,
         violationName,
         points,
         category,
@@ -318,7 +325,7 @@ export default function ViolationManager({ currentUser, classesList }: Violation
     await Promise.all(promises);
     await sendRealtimeNotification(
       'Import Pelanggaran Massal',
-      `Berhasil mengimpor ${parsedRows.length} catatan kedisiplinan siswa kelas ${selectedClass}`,
+      `Berhasil mengimpor ${parsedRows.length} catatan kedisiplinan siswa`,
       NotificationType.PELANGGARAN,
       selectedClass
     );
@@ -343,6 +350,7 @@ export default function ViolationManager({ currentUser, classesList }: Violation
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="text-xs bg-transparent focus:outline-none font-medium text-slate-700"
               >
+                <option value="ALL">Semua Kelas</option>
                 {classesList.map(c => (
                   <option key={c} value={c}>Kelas {c}</option>
                 ))}

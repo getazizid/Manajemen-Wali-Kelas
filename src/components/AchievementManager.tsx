@@ -48,7 +48,10 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
   const fetchStudents = async () => {
     const path = 'students';
     try {
-      const q = query(collection(db, path), where('classId', '==', selectedClass));
+      let q = query(collection(db, path));
+      if (selectedClass !== 'ALL') {
+        q = query(collection(db, path), where('classId', '==', selectedClass));
+      }
       const snapshot = await getDocs(q);
       const list: Student[] = [];
       snapshot.forEach(docSnap => {
@@ -66,7 +69,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
     const path = 'achievements';
     try {
       let q = query(collection(db, path));
-      if (selectedClass) {
+      if (selectedClass && selectedClass !== 'ALL') {
         q = query(collection(db, path), where('classId', '==', selectedClass));
       }
       const snapshot = await getDocs(q);
@@ -158,7 +161,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
       const payload = {
         studentId: formData.studentId,
         studentName: selectedStudent.name,
-        classId: selectedClass,
+        classId: selectedStudent.classId,
         achievementName: formData.achievementName,
         category: formData.category,
         level: formData.level,
@@ -176,7 +179,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
           'Prestasi Murid Ditambahkan',
           `${selectedStudent.name} meraih prestasi: "${formData.achievementName}" tingkat ${formData.level}!`,
           NotificationType.PRESTASI,
-          selectedClass
+          selectedStudent.classId
         );
       } else if (formType === 'update' && editingId) {
         const original = achievements.find(a => a.id === editingId);
@@ -189,7 +192,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
           'Prestasi Murid Diperbarui',
           `Data prestasi untuk ${selectedStudent.name} telah diperbarui`,
           NotificationType.PRESTASI,
-          selectedClass
+          selectedStudent.classId
         );
       }
       setShowModal(false);
@@ -203,13 +206,15 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
     if (!confirm(`Hapus prestasi untuk siswa ${name}?`)) return;
     const path = 'achievements';
     try {
+      const original = achievements.find(a => a.id === id);
+      const targetClass = original?.classId || selectedClass;
       await deleteDoc(doc(db, path, id));
       
       await sendRealtimeNotification(
         'Prestasi Murid Dihapus',
         `Log prestasi siswa ${name} telah dihapus dari sistem`,
         NotificationType.PRESTASI,
-        selectedClass
+        targetClass
       );
 
       fetchAchievements();
@@ -244,34 +249,36 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
   };
 
   const handleExport = () => {
-    const headers = ['Nama Siswa', 'Nama Penghargaan', 'Kategori', 'Tingkat', 'Tanggal', 'Keterangan'];
+    const headers = ['Nama Siswa', 'Kelas', 'Nama Penghargaan', 'Kategori', 'Tingkat', 'Tanggal', 'Keterangan'];
     const rows = filteredAchievements.map(a => [
       a.studentName,
+      a.classId,
       a.achievementName,
       a.category,
       a.level,
       a.date,
       a.description
     ]);
-    exportToCSV(`Prestasi_Siswa_Kelas_${selectedClass}`, headers, rows);
+    exportToCSV(`Prestasi_Siswa_${selectedClass === 'ALL' ? 'Semua_Kelas' : `Kelas_${selectedClass}`}`, headers, rows);
   };
 
   const handlePrint = () => {
-    const headers = ['No', 'Nama Siswa', 'Nama Prestasi / Penghargaan', 'Kategori', 'Tingkat', 'Tanggal'];
+    const headers = ['No', 'Nama Siswa', 'Kelas', 'Nama Prestasi / Penghargaan', 'Kategori', 'Tingkat', 'Tanggal'];
     const rows = filteredAchievements.map((a, idx) => [
       String(idx + 1),
       a.studentName,
+      a.classId,
       a.achievementName,
       a.category,
       a.level,
       a.date
     ]);
     printData(
-      `Daftar Prestasi Siswa Kelas ${selectedClass}`,
+      `Daftar Prestasi Siswa ${selectedClass === 'ALL' ? 'Semua Kelas' : `Kelas ${selectedClass}`}`,
       headers,
       rows,
       [
-        { label: 'Kelas', value: selectedClass },
+        { label: 'Kelas', value: selectedClass === 'ALL' ? 'Semua Kelas' : selectedClass },
         { label: 'Total Prestasi', value: `${filteredAchievements.length} penghargaan` }
       ]
     );
@@ -307,7 +314,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
       const payload = {
         studentId: student.id || '',
         studentName: student.name,
-        classId: selectedClass,
+        classId: student.classId,
         achievementName,
         category,
         level,
@@ -322,7 +329,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
     await Promise.all(promises);
     await sendRealtimeNotification(
       'Import Prestasi Massal',
-      `Berhasil mengimpor ${parsedRows.length} log prestasi siswa kelas ${selectedClass}`,
+      `Berhasil mengimpor ${parsedRows.length} log prestasi siswa`,
       NotificationType.PRESTASI,
       selectedClass
     );
@@ -347,6 +354,7 @@ export default function AchievementManager({ currentUser, classesList }: Achieve
                 onChange={(e) => setSelectedClass(e.target.value)}
                 className="text-xs bg-transparent focus:outline-none font-medium text-slate-700"
               >
+                <option value="ALL">Semua Kelas</option>
                 {classesList.map(c => (
                   <option key={c} value={c}>Kelas {c}</option>
                 ))}
