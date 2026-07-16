@@ -33,6 +33,9 @@ export function printData(title: string, tableHeaders: string[], tableRows: stri
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
+  const appName = localStorage.getItem('appName') || 'SIWALI';
+  const appDesc = localStorage.getItem('appDesc') || 'Aplikasi Manajemen Wali Kelas SMA/SMK';
+
   const metaHtml = additionalMeta && additionalMeta.length > 0
     ? `<div style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px; color: #4b5563;">
         ${additionalMeta.map(m => `<div><strong>${m.label}:</strong> ${m.value}</div>`).join('')}
@@ -98,8 +101,9 @@ export function printData(title: string, tableHeaders: string[], tableRows: stri
     </head>
     <body>
       <div class="header">
-        <h1 class="title">${title}</h1>
-        <p class="subtitle">Aplikasi Manajemen Wali Kelas SMA/SMK</p>
+        <h1 class="title">${appName}</h1>
+        <p class="subtitle">${appDesc}</p>
+        <h2 style="font-size: 16px; margin: 15px 0 0 0; text-transform: uppercase; font-weight: bold; color: #111827; border-top: 1px solid #e5e7eb; padding-top: 10px;">${title}</h2>
       </div>
       
       ${metaHtml}
@@ -114,7 +118,7 @@ export function printData(title: string, tableHeaders: string[], tableRows: stri
       </table>
 
       <div class="footer">
-        Dicetak otomatis pada ${new Date().toLocaleString('id-ID')} | Sistem Manajemen Wali Kelas
+        Dicetak otomatis pada ${new Date().toLocaleString('id-ID')} | ${appName}
       </div>
 
       <script>
