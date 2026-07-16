@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Student, StudentGender, User, UserRole } from '../types';
 import { exportToCSV, printData } from '../utils/export';
@@ -289,8 +289,22 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
       const email = row['Email'] || row['email'] || '';
       const parentName = row['Nama Orang Tua'] || row['nama orang tua'] || '';
       const parentPhone = row['No HP Orang Tua'] || row['no hp orang tua'] || '';
+      const classIdVal = (row['Kelas'] || row['kelas'] || selectedClass || '').trim().toUpperCase();
 
-      if (!name || !nisn) return;
+      if (!name || !nisn || !classIdVal) return;
+
+      // Ensure class exists in the classes collection
+      const classRef = doc(db, 'classes', classIdVal);
+      const classSnap = await getDoc(classRef);
+      if (!classSnap.exists()) {
+        await setDoc(classRef, {
+          id: classIdVal,
+          name: classIdVal,
+          homeroomTeacherId: '',
+          homeroomTeacherName: 'Belum Ditentukan',
+          createdAt: new Date().toISOString()
+        });
+      }
 
       const payload = {
         name,
@@ -300,7 +314,7 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
         email,
         parentName,
         parentPhone,
-        classId: selectedClass,
+        classId: classIdVal,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -311,7 +325,7 @@ export default function StudentManager({ currentUser, classesList }: StudentMana
     await Promise.all(promises);
     await sendRealtimeNotification(
       'Import Siswa Massal',
-      `Berhasil mengimpor ${parsedRows.length} siswa baru ke kelas ${selectedClass}`,
+      `Berhasil mengimpor ${parsedRows.length} siswa baru ke sistem`,
       NotificationType.SISWA,
       selectedClass
     );

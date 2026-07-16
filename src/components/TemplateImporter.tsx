@@ -25,9 +25,9 @@ export default function TemplateImporter({ menuType, classId, students = [], onI
       case 'siswa':
         return {
           title: 'Import Siswa',
-          headers: ['Nama', 'NISN', 'Jenis Kelamin', 'No HP', 'Email', 'Nama Orang Tua', 'No HP Orang Tua'],
-          example: 'Ahmad Syarif,1234567890,Laki-laki,08123456789,ahmad@student.id,Joko,08129876543\nSiti Aminah,1234567891,Perempuan,08123456780,siti@student.id,Aminah,08129876540',
-          desc: 'Gunakan template ini untuk mendaftarkan murid-murid baru di kelas Anda secara massal.'
+          headers: ['Nama', 'NISN', 'Jenis Kelamin', 'Kelas', 'No HP', 'Email', 'Nama Orang Tua', 'No HP Orang Tua'],
+          example: 'Ahmad Syarif,1234567890,Laki-laki,XI-RPL-1,08123456789,ahmad@student.id,Joko,08129876543\nSiti Aminah,1234567891,Perempuan,XI-RPL-2,08123456780,siti@student.id,Aminah,08129876540',
+          desc: 'Gunakan template ini untuk mendaftarkan murid-murid baru secara massal. Kolom Kelas dapat diisi untuk menentukan atau membuat kelas baru.'
         };
       case 'pengurus':
         return {
