@@ -99,28 +99,61 @@ export default function Login({ onLoginSuccess, appName, appDesc }: LoginProps) 
           createdAt: data.createdAt || new Date().toISOString(),
         };
       } else {
-        // Only abdulazizitn@gmail.com becomes ADMIN by default, others become WALI_KELAS
-        const isDefaultAdmin = firebaseUser.email.toLowerCase() === 'abdulazizitn@gmail.com';
-        const role = isDefaultAdmin ? UserRole.ADMIN : UserRole.WALI_KELAS;
-        const defaultClassId = isDefaultAdmin ? '' : 'XI-RPL-1'; // Default class for testing if Wali Kelas
+        // Check if there is a pre-registered user with this email (e.g. seeded wali kelas account)
+        const { collection, query, where, getDocs, deleteDoc } = await import('firebase/firestore');
+        const q = query(collection(db, 'users'), where('email', '==', firebaseUser.email.toLowerCase()));
+        const emailSnap = await getDocs(q);
 
-        appUser = {
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || 'Wali Kelas Baru',
-          email: firebaseUser.email,
-          role: role,
-          classId: defaultClassId,
-          createdAt: new Date().toISOString(),
-        };
+        if (!emailSnap.empty) {
+          const preRegisteredDoc = emailSnap.docs[0];
+          const preRegisteredData = preRegisteredDoc.data();
+          
+          appUser = {
+            id: firebaseUser.uid,
+            name: preRegisteredData.name || firebaseUser.displayName || 'Wali Kelas Baru',
+            email: firebaseUser.email,
+            role: preRegisteredData.role as UserRole,
+            classId: preRegisteredData.classId || '',
+            createdAt: preRegisteredData.createdAt || new Date().toISOString(),
+          };
 
-        // Save new user profile
-        await setDoc(userDocRef, {
-          name: appUser.name,
-          email: appUser.email,
-          role: appUser.role,
-          classId: appUser.classId,
-          createdAt: appUser.createdAt,
-        });
+          // Save profile under Google Auth UID
+          await setDoc(userDocRef, {
+            name: appUser.name,
+            email: appUser.email,
+            role: appUser.role,
+            classId: appUser.classId,
+            createdAt: appUser.createdAt,
+          });
+
+          // Delete the old custom ID document (e.g. wali_x_tsm) to avoid duplicates
+          if (preRegisteredDoc.id !== firebaseUser.uid) {
+            await deleteDoc(doc(db, 'users', preRegisteredDoc.id));
+          }
+        } else {
+          // Only abdulazizitn@gmail.com becomes ADMIN by default, others become WALI_KELAS
+          const isDefaultAdmin = firebaseUser.email.toLowerCase() === 'abdulazizitn@gmail.com';
+          const role = isDefaultAdmin ? UserRole.ADMIN : UserRole.WALI_KELAS;
+          const defaultClassId = isDefaultAdmin ? '' : 'XI-RPL-1'; // Default class for testing if Wali Kelas
+
+          appUser = {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Wali Kelas Baru',
+            email: firebaseUser.email,
+            role: role,
+            classId: defaultClassId,
+            createdAt: new Date().toISOString(),
+          };
+
+          // Save new user profile
+          await setDoc(userDocRef, {
+            name: appUser.name,
+            email: appUser.email,
+            role: appUser.role,
+            classId: appUser.classId,
+            createdAt: appUser.createdAt,
+          });
+        }
       }
 
       onLoginSuccess(appUser);
